@@ -49,7 +49,7 @@ services:
     environment:
       - SPARK_MODE=history
       - SPARK_MASTER_URL=spark://192.168.3.100:7077
-      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=s3a://financials/spark-events -Dspark.history.ui.port=18080 -Dspark.hadoop.fs.s3a.access.key=${MINIO_ROOT_USER} -Dspark.hadoop.fs.s3a.secret.key=${MINIO_ROOT_PASSWORD} -Dspark.hadoop.fs.s3a.endpoint=http://192.168.3.101:9000 -Dspark.hadoop.fs.s3a.path.style.access=true -Dspark.hadoop.fs.s3a.connection.ssl.enabled=false
+      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=s3a://gaming/spark-events -Dspark.history.ui.port=18080 -Dspark.hadoop.fs.s3a.access.key=${MINIO_ROOT_USER} -Dspark.hadoop.fs.s3a.secret.key=${MINIO_ROOT_PASSWORD} -Dspark.hadoop.fs.s3a.endpoint=http://192.168.3.101:9000 -Dspark.hadoop.fs.s3a.path.style.access=true -Dspark.hadoop.fs.s3a.connection.ssl.enabled=false
     command: [ "bash", "-c", "mkdir -p /data && /usr/local/bin/spark-minio-entrypoint.sh" ]
     networks:
       net-gaming:
