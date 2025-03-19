@@ -91,15 +91,16 @@ def main(spark: SparkSession):
 
 if __name__ == "__main__":
 
-    builder: SparkSession = (
+    spark: SparkSession = (
         SparkSession.builder
         .appName("Gaming")
         .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.3.101:9000")
         .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
         .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
         .config("spark.sql.warehouse.dir", "s3a://gaming/tmp/spark-warehouse")
+        .getOrCreate()
     )
 
-    spark = configure_spark_with_delta_pip(builder).getOrCreate()
+    # spark = configure_spark_with_delta_pip(builder).getOrCreate()
 
     main(spark)
