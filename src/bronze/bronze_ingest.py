@@ -1,6 +1,5 @@
 """Module responsibles for ingest raw data to bronze layer."""
 import os
-from delta import *
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as f
 from functools import reduce
@@ -100,7 +99,5 @@ if __name__ == "__main__":
         .config("spark.sql.warehouse.dir", "s3a://gaming/tmp/spark-warehouse")
         .getOrCreate()
     )
-
-    # spark = configure_spark_with_delta_pip(builder).getOrCreate()
 
     main(spark)
