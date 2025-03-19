@@ -1,3 +1,4 @@
+"""Module responsibles for ingest raw data to bronze layer."""
 import os
 from delta import *
 from pyspark.sql import SparkSession, DataFrame
@@ -6,6 +7,19 @@ from functools import reduce
 
 
 def read_bronze_csv(spark: SparkSession, root_path: str, file_name: str) -> DataFrame:
+    """Reads raw csv data from each konsole subfolder.
+
+    Args:
+        spark (SparkSession): SparkSession instance.
+        root_path (str): Root path to source folder.
+        file_name (str): File name to read.
+
+    Raises:
+        ValueError: If there is no data to read.
+
+    Returns:
+        DataFrame: Appended dataframe with data from each console.
+    """
     subfolders = ["playstation", "steam", "xbox"]
     dataframes = []
     
@@ -33,11 +47,27 @@ def read_bronze_csv(spark: SparkSession, root_path: str, file_name: str) -> Data
     return reduce(lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True), dataframes)
 
 def load_bronze(spark: SparkSession, df: DataFrame, table_name: str, mode: str = "overwrite"):
+    """Loads data to bronze schema.
+
+    Args:
+        spark (SparkSession): SparkSession instance.
+        df (DataFrame): DataFrame wit data to be loaded.
+        table_name (str): Destination table name.
+        mode (str, optional): Writing mode. Defaults to "overwrite".
+    """
     spark.sql("CREATE SCHEMA IF NOT EXISTS bronze")
     df.write.format("delta").mode(mode).option("overwriteSchema", "true").saveAsTable(table_name)
     print(f"Dane zapisane w {table_name}")
 
-def process_table(spark: SparkSession, file_name: str, table_name: str, unique_id_column: str):
+def process_bronze_table(spark: SparkSession, file_name: str, table_name: str, unique_id_column: str):
+    """Combines read and load data for bronze layer.
+
+    Args:
+        spark (SparkSeprocess_bronze_tablession): SparkSession instance.
+        file_name (str): CSV source file.
+        table_name (str): Destination table name.
+        unique_id_column (str): Column used to create unique id with source_folder value.
+    """
     df = read_bronze_csv(spark, "s3a://gaming/raw", file_name)
 
     if unique_id_column in df.columns:
@@ -46,12 +76,17 @@ def process_table(spark: SparkSession, file_name: str, table_name: str, unique_i
     load_bronze(spark, df, f"bronze.{table_name}")
 
 def main(spark: SparkSession):
-    process_table(spark, "games.csv", "games_titles", "gameid")
-    process_table(spark, "achievements.csv", "achievements", "achievementid")
-    process_table(spark, "history.csv", "achievements_history", "achievementid")
-    process_table(spark, "players.csv", "players", "playerid")
-    process_table(spark, "prices.csv", "games_prices", "gameid")
-    process_table(spark, "purchased_games.csv", "purchased_games", "playerid")
+    """Main function for processing bronze layer.
+
+    Args:
+        spark (SparkSession): SparkSession instance.
+    """
+    process_bronze_table(spark, "games.csv", "games_titles", "gameid")
+    process_bronze_table(spark, "achievements.csv", "achievements", "achievementid")
+    process_bronze_table(spark, "history.csv", "achievements_history", "achievementid")
+    process_bronze_table(spark, "players.csv", "players", "playerid")
+    process_bronze_table(spark, "prices.csv", "games_prices", "gameid")
+    process_bronze_table(spark, "purchased_games.csv", "purchased_games", "playerid")
 
 
 if __name__ == "__main__":
@@ -68,13 +103,3 @@ if __name__ == "__main__":
     spark = configure_spark_with_delta_pip(builder).getOrCreate()
 
     main(spark)
-    
-    # df_bronze.show()
-    # df_bronze.printSchema()
-    # df_bronze.select("platform").distinct().show()
-    # df_bronze.select("developers").distinct().show()
-    # df_bronze.select("publishers").distinct().show()
-    # df_bronze.select("genres").distinct().show()
-    # df_bronze.select("supported_languages").distinct().show()
-    # df_bronze.groupBy("unique_game_id").count().filter(f.col("count") > 1).show()
-    # df_bronze.select([f.sum(f.col(c).isNull().cast("int")).alias(c) for c in df_bronze.columns]).show()
