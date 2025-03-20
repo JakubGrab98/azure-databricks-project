@@ -55,8 +55,13 @@ def load_bronze(spark: SparkSession, df: DataFrame, table_name: str, mode: str =
         mode (str, optional): Writing mode. Defaults to "overwrite".
     """
     spark.sql("CREATE SCHEMA IF NOT EXISTS bronze")
-    df.write.format("delta").mode(mode).option("overwriteSchema", "true").saveAsTable(table_name)
-    print(f"Dane zapisane w {table_name}")
+    spark.sql(f"DROP TABLE IF EXISTS bronze.{table_name}" )
+    spark.sql(f"""
+        CREATE TABLE bronze.{table_name}
+        USING DELTA
+        LOCATION 's3a://gaming/bronze/{table_name}'
+    """)
+    df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(f"s3a://gaming/bronze/{table_name}")
 
 def process_bronze_table(spark: SparkSession, file_name: str, table_name: str, unique_id_column: str):
     """Combines read and load data for bronze layer.
@@ -72,7 +77,7 @@ def process_bronze_table(spark: SparkSession, file_name: str, table_name: str, u
     if unique_id_column in df.columns:
         df = df.withColumn(f"unique_{unique_id_column}", f.concat_ws("-", df[unique_id_column], df["source_folder"]))
 
-    load_bronze(spark, df, f"bronze.{table_name}")
+    load_bronze(spark, df, table_name)
 
 def main(spark: SparkSession):
     """Main function for processing bronze layer.
@@ -96,7 +101,9 @@ if __name__ == "__main__":
         .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.3.101:9000")
         .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
         .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
-        .config("spark.sql.warehouse.dir", "s3a://gaming/tmp/spark-warehouse")
+        .config("spark.sql.catalogImplementation", "hive")
+        .config("spark.sql.warehouse.dir", "s3a://gaming/")
+        .enableHiveSupport()
         .getOrCreate()
     )
 
