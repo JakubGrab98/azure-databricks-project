@@ -143,6 +143,19 @@ def transform_bronze_purchased_games(df: DataFrame):
     )
     return df_silver_purchased
 
+def transform_bronze_achievement_history(df: DataFrame):
+    df_silver_history = (
+        df
+        .withColumn(
+            "unique_achievementid",
+            f.concat_ws("_", f.col("playerid"), f.col("unique_achievementid"))
+        )
+        .withColumn("date_acquired", df.date_acquired.cast(DateType()))
+        .withColumn("playerid", df.playerid.cast(IntegerType()))
+        .withColumn("achievementid", df.playerid.cast(IntegerType()))
+    )
+    return df_silver_history
+
 def process_silver_table(spark: SparkSession, table_name: str, transform_func):
     silver_df = transform_silver_table(spark, table_name, transform_func)
     load_silver(spark, silver_df, table_name)
@@ -151,6 +164,9 @@ def main(spark: SparkSession):
     process_silver_table(spark, "games_titles", transform_bronze_games)
     process_silver_table(spark, "achievements", transform_bronze_achievements)
     process_silver_table(spark, "games_prices", transform_bronze_prices)
+    process_silver_table(spark, "achievements_history", transform_bronze_achievement_history)
+    process_silver_table(spark, "purchased_games", transform_bronze_purchased_games)
+    process_silver_table(spark, "players", transform_bronze_players)
 
 
 if __name__ == "__main__":
