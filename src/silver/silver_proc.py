@@ -116,6 +116,15 @@ def transform_bronze_prices(df: DataFrame):
     )
     return filtered_prices
 
+def transform_bronze_players(df: DataFrame):
+    df_silver_players = (
+        df
+        .fillna("N/A")
+        .withColumn("country", f.trim(f.col("country")))
+        .withColumn("nickname", f.trim(f.col("nickname")))
+    )
+    return df_silver_players
+
 def process_silver_table(spark: SparkSession, table_name: str, transform_func):
     silver_df = transform_silver_table(spark, table_name, transform_func)
     load_silver(spark, silver_df, table_name)
