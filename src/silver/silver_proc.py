@@ -125,6 +125,24 @@ def transform_bronze_players(df: DataFrame):
     )
     return df_silver_players
 
+def transform_bronze_purchased_games(df: DataFrame):
+    array_columns = ["library"]
+    df_silver_purchased = (
+        df
+        .transform(convert_to_array, array_columns, "array<int>")
+        .withColumn(
+            "library",
+            f.when(f.col("library").isNull(), f.array().cast("array<int>"))
+            .otherwise(f.col("library"))
+        )
+        .withColumn(
+            "library",
+            f.expr("filter(library, x -> x is not null)")
+        )
+        .withColumn("no_purchased_games", f.size("library"))
+    )
+    return df_silver_purchased
+
 def process_silver_table(spark: SparkSession, table_name: str, transform_func):
     silver_df = transform_silver_table(spark, table_name, transform_func)
     load_silver(spark, silver_df, table_name)
