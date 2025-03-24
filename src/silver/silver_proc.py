@@ -96,8 +96,8 @@ def transform_bronze_prices(df: DataFrame) -> DataFrame:
         .filter(f.col("price_changes") == 1)
         .withColumn("next_start", f.lead("start_date", 1).over(w))
         .withColumn("end_date", f.date_sub(f.col("next_start").cast(DateType()), 1))
-        .withColumn("price", df.price.cast(FloatType()))
-        .withColumn("start_date", df.start_date.cast(DateType()))
+        .withColumn("price", f.col("price").cast(FloatType()))
+        .withColumn("start_date", f.col("start_date").cast(DateType()))
         .withColumn("gameid", df.gameid.cast(IntegerType()))
     )
     return prices_df
@@ -139,7 +139,7 @@ def transform_bronze_achievement_history(df: DataFrame) -> DataFrame:
         )
         .withColumn("date_acquired", df.date_acquired.cast(DateType()))
         .withColumn("playerid", df.playerid.cast(IntegerType()))
-        .withColumn("achievementid", df.playerid.cast(IntegerType()))
+        .withColumn("achievementid", df.achievementid.cast(IntegerType()))
     )
 
 def process_silver_table(spark: SparkSession, table_name: str, transform_func: Callable) -> None:
