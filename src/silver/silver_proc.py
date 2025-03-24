@@ -1,47 +1,40 @@
+"""Module responsibles for processing data from bronze to silver layer."""
 import os
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.window import Window
 import pyspark.sql.functions as f
 from pyspark.sql.types import DateType, FloatType, IntegerType
-from typing import List
-
+from typing import Callable
+from utils import convert_to_array, remove_quotation
 
 GAMES_COLUMNS_TO_CONVERT = ["developers", "publishers", "genres", "supported_languages"]
 
-def convert_to_array(df: DataFrame, columns: List[str], array_type: str) -> DataFrame:
-    for column in columns:
-        df = df.withColumn(
-            column,
-            f.expr(f"split(regexp_replace({column}, '^\[|\]$', ''), ',')").cast(array_type)
-    )
-    return df
 
-def remove_quotation(df: DataFrame, columns: List[str]) -> DataFrame:
-    for column in columns:
-        df = df.withColumn(
-            column,
-            f.trim(f.regexp_replace(column, '^"|"$', ''))
-        )
-    return df
+def transform_silver_table(spark: SparkSession, bronze_table: str, transformation: Callable) -> DataFrame:
+    """
+    Applies transformation to a Bronze table and returns the transformed Silver DataFrame.
 
-def convert_to_float(df: DataFrame, columns: List[str]):
-    for column in columns:
-        df = df.withColumn(column, df.column.cast(FloatType()))
-    return df
+    Args:
+        spark (SparkSession): Spark session.
+        bronze_table (str): Bronze table name.
+        transformation (Callable): Transformation function.
 
-def transform_silver_table(spark: SparkSession, bronze_table: str, transformation):
+    Returns:
+        DataFrame: Transformed Silver DataFrame.
+    """
     df = spark.sql(f"SELECT * FROM bronze.{bronze_table}")
-    transformed_df = df.transform(transformation, df)
+    transformed_df = df.transform(transformation)
     return transformed_df
 
-def load_silver(spark: SparkSession, df: DataFrame, table_name: str, mode: str = "overwrite"):
-    """Loads data to bronze schema.
+def load_silver(spark: SparkSession, df: DataFrame, table_name: str, mode: str = "overwrite") -> None:
+    """
+    Saves the DataFrame to Delta format in the silver layer and registers the table.
 
     Args:
         spark (SparkSession): SparkSession instance.
-        df (DataFrame): DataFrame wit data to be loaded.
+        df (DataFrame): DataFrame to be saved.
         table_name (str): Destination table name.
-        mode (str, optional): Writing mode. Defaults to "overwrite".
+        mode (str): Write mode. Defaults to "overwrite".
     """
     spark.sql("CREATE SCHEMA IF NOT EXISTS silver")
     spark.sql(f"DROP TABLE IF EXISTS silver.{table_name}" )
@@ -52,8 +45,9 @@ def load_silver(spark: SparkSession, df: DataFrame, table_name: str, mode: str =
     """)
     df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(f"s3a://gaming/silver/{table_name}")
 
-def transform_bronze_games(df: DataFrame):
-    df_silver_games = (
+def transform_bronze_games(df: DataFrame) -> DataFrame:
+    """Transforms games data from bronze to cleaned silver version."""
+    return (
         df
         .filter(f.col("title").isNotNull())
         .withColumn("platform", f.when(f.left(df.platform, f.lit(2)) == "PS", df.platform)
@@ -65,11 +59,11 @@ def transform_bronze_games(df: DataFrame):
         .fillna("N/A")
         .transform(convert_to_array, GAMES_COLUMNS_TO_CONVERT, "array<string>")
     )
-    return df_silver_games
 
-def transform_bronze_achievements(df: DataFrame):
+def transform_bronze_achievements(df: DataFrame) -> DataFrame:
+    """Cleans and filters achievements data from bronze layer."""
     string_columns = ["title", "description", "rarity"]
-    df_silver_achievements = (
+    return (
         df
         .filter(
             (f.col("achievementid").rlike(r"^\d+_\d+$"))
@@ -82,11 +76,11 @@ def transform_bronze_achievements(df: DataFrame):
         )
         .fillna("N/A")
     )
-    return df_silver_achievements
 
-def transform_bronze_prices(df: DataFrame):
+def transform_bronze_prices(df: DataFrame) -> DataFrame:
+    """Extracts price change ranges from historical prices data."""
     w = Window.partitionBy("unique_gameid").orderBy("start_date")
-    prices_lag_df = (
+    prices_df = (
         df
         .filter(f.col("usd").isNotNull())
         .withColumnRenamed("usd", "price")
@@ -95,39 +89,32 @@ def transform_bronze_prices(df: DataFrame):
         .withColumn("prev_price",
             f.lag("price", 1).over(w)
         )
-    )
-
-    prices_flagged_df = (
-        prices_lag_df
         .withColumn("price_changes",
             f.when((f.col("price") != f.col("prev_price")) | (f.col("prev_price").isNull()), 1)
             .otherwise(0)
         )
-    )
-
-    filtered_prices = (
-        prices_flagged_df
         .filter(f.col("price_changes") == 1)
         .withColumn("next_start", f.lead("start_date", 1).over(w))
         .withColumn("end_date", f.date_sub(f.col("next_start").cast(DateType()), 1))
-        .withColumn("price", prices_flagged_df.price.cast(FloatType()))
-        .withColumn("start_date", prices_flagged_df.start_date.cast(DateType()))
-        .withColumn("gameid", prices_flagged_df.gameid.cast(IntegerType()))
+        .withColumn("price", df.price.cast(FloatType()))
+        .withColumn("start_date", df.start_date.cast(DateType()))
+        .withColumn("gameid", df.gameid.cast(IntegerType()))
     )
-    return filtered_prices
+    return prices_df
 
-def transform_bronze_players(df: DataFrame):
-    df_silver_players = (
+def transform_bronze_players(df: DataFrame) -> DataFrame:
+    """Cleans player data by trimming and filling missing values."""
+    return (
         df
         .fillna("N/A")
         .withColumn("country", f.trim(f.col("country")))
         .withColumn("nickname", f.trim(f.col("nickname")))
     )
-    return df_silver_players
 
-def transform_bronze_purchased_games(df: DataFrame):
+def transform_bronze_purchased_games(df: DataFrame) -> DataFrame:
+    """Cleans and prepares purchased games data with array size info."""
     array_columns = ["library"]
-    df_silver_purchased = (
+    return (
         df
         .transform(convert_to_array, array_columns, "array<int>")
         .withColumn(
@@ -141,10 +128,10 @@ def transform_bronze_purchased_games(df: DataFrame):
         )
         .withColumn("no_purchased_games", f.size("library"))
     )
-    return df_silver_purchased
 
-def transform_bronze_achievement_history(df: DataFrame):
-    df_silver_history = (
+def transform_bronze_achievement_history(df: DataFrame) -> DataFrame:
+    """Transforms achievement history data with correct IDs and date formatting."""
+    return (
         df
         .withColumn(
             "unique_achievementid",
@@ -154,13 +141,14 @@ def transform_bronze_achievement_history(df: DataFrame):
         .withColumn("playerid", df.playerid.cast(IntegerType()))
         .withColumn("achievementid", df.playerid.cast(IntegerType()))
     )
-    return df_silver_history
 
-def process_silver_table(spark: SparkSession, table_name: str, transform_func):
+def process_silver_table(spark: SparkSession, table_name: str, transform_func: Callable) -> None:
+    """Processes and saves one silver table."""
     silver_df = transform_silver_table(spark, table_name, transform_func)
     load_silver(spark, silver_df, table_name)
 
-def main(spark: SparkSession):
+def main(spark: SparkSession) -> None:
+    """Main function to run silver layer transformations for all datasets."""
     process_silver_table(spark, "games_titles", transform_bronze_games)
     process_silver_table(spark, "achievements", transform_bronze_achievements)
     process_silver_table(spark, "games_prices", transform_bronze_prices)
