@@ -8,11 +8,11 @@ from typing import List
 
 GAMES_COLUMNS_TO_CONVERT = ["developers", "publishers", "genres", "supported_languages"]
 
-def convert_to_array(df: DataFrame, columns: List[str]) -> DataFrame:
+def convert_to_array(df: DataFrame, columns: List[str], array_type: str) -> DataFrame:
     for column in columns:
         df = df.withColumn(
             column,
-            f.expr(f"split(regexp_replace({column}, '^\[|\]$', ''), ',')").cast("array<string>")
+            f.expr(f"split(regexp_replace({column}, '^\[|\]$', ''), ',')").cast(array_type)
     )
     return df
 
@@ -63,7 +63,7 @@ def transform_bronze_games(df: DataFrame):
         .withColumnRenamed("platform", "subplatform")
         .withColumnRenamed("source_folder", "platform")
         .fillna("N/A")
-        .transform(convert_to_array, GAMES_COLUMNS_TO_CONVERT)
+        .transform(convert_to_array, GAMES_COLUMNS_TO_CONVERT, "array<string>")
     )
     return df_silver_games
 
