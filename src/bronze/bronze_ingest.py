@@ -3,6 +3,7 @@ import os
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as f
 from functools import reduce
+from common.spark_session import get_spark
 
 
 def read_bronze_csv(spark: SparkSession, root_path: str, file_name: str) -> DataFrame:
@@ -95,16 +96,6 @@ def main(spark: SparkSession):
 
 if __name__ == "__main__":
 
-    spark: SparkSession = (
-        SparkSession.builder
-        .appName("Gaming")
-        .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.3.101:9000")
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
-        .config("spark.sql.catalogImplementation", "hive")
-        .config("spark.sql.warehouse.dir", "s3a://gaming/")
-        .enableHiveSupport()
-        .getOrCreate()
-    )
+    spark = get_spark()
 
     main(spark)
