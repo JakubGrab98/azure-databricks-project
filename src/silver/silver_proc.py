@@ -1,11 +1,11 @@
 """Module responsibles for processing data from bronze to silver layer."""
-import os
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.window import Window
 import pyspark.sql.functions as f
 from pyspark.sql.types import DateType, FloatType, IntegerType
 from typing import Callable
 from utils import convert_to_array, remove_quotation
+from common.spark_session import get_spark
 
 GAMES_COLUMNS_TO_CONVERT = ["developers", "publishers", "genres", "supported_languages"]
 
@@ -158,16 +158,6 @@ def main(spark: SparkSession) -> None:
 
 
 if __name__ == "__main__":
-    spark: SparkSession = (
-        SparkSession.builder
-        .appName("Gaming")  # type: ignore
-        .config("spark.hadoop.fs.s3a.endpoint", "http://192.168.3.101:9000")
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ROOT_USER"))
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_ROOT_PASSWORD"))
-        .config("spark.sql.catalogImplementation", "hive")
-        .config("spark.sql.warehouse.dir", "s3a://gaming/")
-        .enableHiveSupport()
-        .getOrCreate()
-    )
+    spark = get_spark()
 
     main(spark)
