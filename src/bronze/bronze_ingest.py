@@ -1,5 +1,4 @@
 """Module responsibles for ingest raw data to bronze layer."""
-import os
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as f
 from functools import reduce
