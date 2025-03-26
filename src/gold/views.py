@@ -26,3 +26,15 @@ def create_dim_prices(spark: SparkSession):
         end_date
     FROM silver.games_prices
     """)
+
+def create_dim_achievement(spark: SparkSession):
+    spark.sql("""
+    CREATE OR REPLACE VIEW gold.dim_achievement AS
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY unique_achievementid) AS achievement_key,
+        achievementid,
+        source_folder AS console,
+        title,
+        description
+    FROM silver.achievements
+    """)
