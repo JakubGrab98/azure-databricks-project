@@ -1,4 +1,5 @@
 .env
 azure_init.ps
 datasets/
-silver/__pycache__
+src/silver/__pycache__/
+src/common/__pycache__/
