@@ -5,12 +5,15 @@ def create_dim_players(spark: SparkSession):
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_players AS
     SELECT 
-        ROW_NUMBER() OVER (ORDER BY unique_playerid) AS player_key,
-        playerid,
-        nickname,
-        country,
-        source_folder AS console
-    FROM silver.players
+        ROW_NUMBER() OVER (ORDER BY p.unique_playerid) AS player_key,
+        p.playerid,
+        p.nickname,
+        p.country,
+        p.source_folder AS console,
+        COALESCE(g.no_purchased_games, 0) AS total_owned_games
+    FROM silver.players p
+    LEFT JOIN silver.purchased_games g
+        ON p.unique_playerid = g.unique_playerid
     """)
 
 def create_dim_prices(spark: SparkSession):
