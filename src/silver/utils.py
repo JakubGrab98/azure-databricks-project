@@ -4,7 +4,7 @@ import pyspark.sql.functions as f
 from typing import List
 
 
-def convert_to_array(df: DataFrame, columns: List[str], array_type: str = "array<string>") -> DataFrame:
+def convert_to_array(df: DataFrame, columns: List[str], regex: str, array_type: str = "array<string>") -> DataFrame:
     """
     Converts stringified lists (e.g. "['a', 'b']") to Spark arrays.
 
@@ -20,7 +20,7 @@ def convert_to_array(df: DataFrame, columns: List[str], array_type: str = "array
         df = df.withColumn(
             column,
             f.split(
-                f.regexp_replace(f.col(column), r"[\[\]'\" ]", ""), ","
+                f.regexp_replace(f.col(column), regex, ""), ","
             ).cast(array_type)
         )
         df = df.withColumn(
