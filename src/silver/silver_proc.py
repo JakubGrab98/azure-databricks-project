@@ -139,7 +139,6 @@ def transform_bronze_achievement_history(df: DataFrame) -> DataFrame:
         )
         .withColumn("date_acquired", df.date_acquired.cast(DateType()))
         .withColumn("playerid", df.playerid.cast(IntegerType()))
-        .withColumn("achievementid", df.achievementid.cast(IntegerType()))
     )
 
 def process_silver_table(spark: SparkSession, table_name: str, transform_func: Callable) -> None:
