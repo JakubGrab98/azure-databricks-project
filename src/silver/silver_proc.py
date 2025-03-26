@@ -57,7 +57,7 @@ def transform_bronze_games(df: DataFrame) -> DataFrame:
         .withColumnRenamed("platform", "subplatform")
         .withColumnRenamed("source_folder", "platform")
         .fillna("N/A")
-        .transform(convert_to_array, GAMES_COLUMNS_TO_CONVERT, "array<string>")
+        .transform(convert_to_array, GAMES_COLUMNS_TO_CONVERT, r"[\[\]'\" ]", "array<string>")
     )
 
 def transform_bronze_achievements(df: DataFrame) -> DataFrame:
@@ -113,19 +113,9 @@ def transform_bronze_players(df: DataFrame) -> DataFrame:
 
 def transform_bronze_purchased_games(df: DataFrame) -> DataFrame:
     """Cleans and prepares purchased games data with array size info."""
-    array_columns = ["library"]
     return (
         df
-        .transform(convert_to_array, array_columns, "array<int>")
-        .withColumn(
-            "library",
-            f.when(f.col("library").isNull(), f.array().cast("array<int>"))
-            .otherwise(f.col("library"))
-        )
-        .withColumn(
-            "library",
-            f.expr("filter(library, x -> x is not null)")
-        )
+        .transform(convert_to_array, ["library"], r"[\\[\\] ]", "array<int>")
         .withColumn("no_purchased_games", f.size("library"))
     )
 
