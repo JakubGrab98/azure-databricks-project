@@ -20,7 +20,7 @@ def create_dim_prices(spark: SparkSession):
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_prices AS
     SELECT 
-        ROW_NUMBER() OVER (ORDER BY unique_gameid) AS player_key,
+        ROW_NUMBER() OVER (ORDER BY unique_gameid) AS price_key,
         gameid,
         source_folder AS console,
         price,
@@ -105,4 +105,36 @@ def create_dim_games(spark: SparkSession):
         ON gt.game_key = g.game_key
     JOIN dim_supported_languages l
         ON gt.game_key = l.game_key
+    """)
+
+def create_fact_achievement(spark: SparkSession):
+    spark.sql("""
+    CREATE OR REPLACE VIEW gold.fact_achievement AS
+    WITH fact AS (
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY date_acquired) AS fact_key, 
+        playerid,
+        SUBSTRING(achievementid, 0, CHARINDEX('_', achievementid)+1) AS gameid,
+        SUBSTRING(achievementid, CHARINDEX('_', achievementid), LEN(achievementid)) AS achievementid,
+        source_file AS console,
+        date_acquired
+    FROM silver.achievements_history
+    )
+    SELECT 
+        f.fact_key,
+        f.date_acquired,
+        f.source_file AS console,
+        g.game_key,
+        p.player_key,
+        pr.price_key,
+        a.achievement_key
+    FROM fact f
+    JOIN dim_players p
+        ON f.playerid = p.playerid AND f.console = p.console
+    JOIN dim_prices pr
+        ON f.gameid = pr.gameid AND f.console = pr.console
+    JOIN dim_achievement a
+        ON f.achievementid = a.achievementid AND f.console = a.console
+    JOIN dim_games g
+        ON f.gameid = g.gameid AND f.console = g.console
     """)
