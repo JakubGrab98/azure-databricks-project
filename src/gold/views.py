@@ -41,3 +41,68 @@ def create_dim_achievement(spark: SparkSession):
         description
     FROM silver.achievements
     """)
+
+def create_bridge_tables(
+    spark: SparkSession, 
+    array_column: str,
+    dim_key: str,
+    dim_value: str
+):
+    spark.sql(f"""
+    CREATE OR REPLACE VIEW gold.dim_{array_column} AS
+    WITH exploded AS (
+        SELECT 
+            explode({array_column}) AS {dim_value}
+        FROM silver.games_titles
+    ),
+    dim_{array_column} AS (
+        SELECT DISTINCT {dim_value},
+            ROW_NUMBER() OVER (ORDER BY {dim_value}) AS {dim_key}
+        FROM exploded
+    )
+    SELECT * FROM dim_{array_column}
+    """)
+
+    spark.sql(f"""
+    CREATE OR REPLACE VIEW gold.bridge_game_{array_column} AS
+    WITH exploded AS (
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY unique_gameid) AS game_key, 
+        explode({array_column}) AS {dim_value}
+    FROM silver.games_titles
+    ),
+    dim_{array_column} AS (
+    SELECT DISTINCT {dim_value},
+            ROW_NUMBER() OVER (ORDER BY {dim_value}) AS {dim_key}
+    FROM exploded
+    )
+    SELECT e.game_key, d.{dim_key}
+    FROM exploded e
+    JOIN dim_{array_column} d ON e.{dim_value} = d.{dim_value}
+    """)
+
+def create_dim_games(spark: SparkSession):
+    spark.sql("""
+    CREATE OR REPLACE VIEW gold.dim_games AS
+    SELECT 
+        gt.ROW_NUMBER() OVER (ORDER BY unique_gameid) AS game_key,
+        gt.gameid,
+        gt.title,
+        gt.platform,
+        gt.subplatform,
+        gt.title,
+        gt.release_date
+        p.publishers_key,
+        d.developers_key,
+        g.genres_key,
+        l.supported_languages_key
+    FROM silver.games_titles gt
+    JOIN dim_publishers p
+        ON gt.game_key = p.game_key
+    JOIN dim_developers d
+        ON gt.game_key = d.game_key
+    JOIN dim_genres g
+        ON gt.game_key = g.game_key
+    JOIN dim_supported_languages l
+        ON gt.game_key = l.game_key
+    """)
