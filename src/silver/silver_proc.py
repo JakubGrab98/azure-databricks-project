@@ -2,7 +2,7 @@
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.window import Window
 import pyspark.sql.functions as f
-from pyspark.sql.types import DateType, FloatType, IntegerType
+from pyspark.sql.types import DateType, FloatType, IntegerType, LongType
 from typing import Callable
 from utils import convert_to_array, remove_quotation
 from common.spark_session import get_spark
@@ -128,7 +128,7 @@ def transform_bronze_achievement_history(df: DataFrame) -> DataFrame:
             f.concat_ws("_", f.col("playerid"), f.col("unique_achievementid"))
         )
         .withColumn("date_acquired", df.date_acquired.cast(DateType()))
-        .withColumn("playerid", df.playerid.cast(IntegerType()))
+        .withColumn("playerid", df.playerid.cast(LongType()))
     )
 
 def process_silver_table(spark: SparkSession, table_name: str, transform_func: Callable) -> None:
