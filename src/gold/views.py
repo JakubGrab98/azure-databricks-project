@@ -78,34 +78,50 @@ def create_bridge_tables(
     )
     SELECT e.game_key, d.{dim_key}
     FROM exploded e
-    JOIN dim_{array_column} d ON e.{dim_value} = d.{dim_value}
+    JOIN gold.dim_{array_column} d ON e.{dim_value} = d.{dim_value}
     """)
 
 def create_dim_games(spark: SparkSession):
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_games AS
     SELECT 
-        gt.ROW_NUMBER() OVER (ORDER BY unique_gameid) AS game_key,
-        gt.gameid,
-        gt.title,
-        gt.platform,
-        gt.subplatform,
-        gt.title,
-        gt.release_date
-        p.publishers_key,
-        d.developers_key,
-        g.genres_key,
-        l.supported_languages_key
-    FROM silver.games_titles gt
-    JOIN dim_publishers p
-        ON gt.game_key = p.game_key
-    JOIN dim_developers d
-        ON gt.game_key = d.game_key
-    JOIN dim_genres g
-        ON gt.game_key = g.game_key
-    JOIN dim_supported_languages l
-        ON gt.game_key = l.game_key
+        ROW_NUMBER() OVER (ORDER BY unique_gameid) AS game_key,
+        gameid,
+        title,
+        platform AS console,
+        subplatform AS platform,
+        release_date
+    FROM silver.games_titles
     """)
+
+def create_games_flat(spark: SparkSession):
+    spark.sql("""
+    CREATE OR REPLACE VIEW gold.games_flat AS
+    SELECT 
+        g.game_key,
+        g.gameid,
+        g.title,
+        g.console,
+        g.platform,
+        g.release_date,
+        p.publisher_name,
+        d.developer_name,
+        ge.genre,
+        l.language
+    FROM gold.dim_games g
+    LEFT JOIN gold.bridge_game_publishers bgp ON g.game_key = bgp.game_key
+    LEFT JOIN gold.dim_publishers p ON bgp.publishers_key = p.publishers_key
+
+    LEFT JOIN gold.bridge_game_developers bgd ON g.game_key = bgd.game_key
+    LEFT JOIN gold.dim_developers d ON bgd.developers_key = d.developers_key
+
+    LEFT JOIN gold.bridge_game_genres bgg ON g.game_key = bgg.game_key
+    LEFT JOIN gold.dim_genres ge ON bgg.genres_key = ge.genres_key
+
+    LEFT JOIN gold.bridge_game_supported_languages bgl ON g.game_key = bgl.game_key
+    LEFT JOIN gold.dim_supported_languages l ON bgl.languages_key = l.languages_key
+""")
+
 
 def create_fact_achievement(spark: SparkSession):
     spark.sql("""
@@ -114,8 +130,10 @@ def create_fact_achievement(spark: SparkSession):
     SELECT 
         ROW_NUMBER() OVER (ORDER BY date_acquired) AS fact_key, 
         playerid,
-        SUBSTRING(achievementid, 0, CHARINDEX('_', achievementid)+1) AS gameid,
-        SUBSTRING(achievementid, CHARINDEX('_', achievementid), LEN(achievementid)) AS achievementid,
+        SUBSTRING(achievementid, 1, INSTR(achievementid, '_')) AS gameid,
+        SUBSTRING(
+              achievementid, INSTR(achievementid, '_') + 1, LENGTH(achievementid)
+        ) AS achievementid,
         source_file AS console,
         date_acquired
     FROM silver.achievements_history
@@ -123,18 +141,18 @@ def create_fact_achievement(spark: SparkSession):
     SELECT 
         f.fact_key,
         f.date_acquired,
-        f.source_file AS console,
+        f.console,
         g.game_key,
         p.player_key,
         pr.price_key,
         a.achievement_key
     FROM fact f
-    JOIN dim_players p
+    JOIN gold.dim_players p
         ON f.playerid = p.playerid AND f.console = p.console
-    JOIN dim_prices pr
+    JOIN gold.dim_prices pr
         ON f.gameid = pr.gameid AND f.console = pr.console
-    JOIN dim_achievement a
+    JOIN gold.dim_achievement a
         ON f.achievementid = a.achievementid AND f.console = a.console
-    JOIN dim_games g
+    JOIN gold.dim_games g
         ON f.gameid = g.gameid AND f.console = g.console
     """)
