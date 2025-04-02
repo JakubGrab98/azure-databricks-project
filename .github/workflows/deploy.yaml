@@ -22,7 +22,10 @@ jobs:
           python-version: '3.10'
 
       - name: Install Databricks CLI
-        run: pip install databricks-cli databricks-sdk
+        run: pip install databricks-cli==0.244.0
+
+      - name: Show Databricks CLI version
+        run: databricks -v
 
       - name: Configure DATABRICKS_HOST for Dev
         run: |
