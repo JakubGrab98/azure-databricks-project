@@ -1,47 +1,47 @@
-name: Deploy to Databricks
+# name: Deploy to Databricks
 
-on:
-  push:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main ]
 
-env:
-  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+# env:
+#   DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
 
-jobs:
-  deploy:
-    name: Deploy Asset Bundle to Dev
-    runs-on: ubuntu-latest
+# jobs:
+#   deploy:
+#     name: Deploy Asset Bundle to Dev
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.11'
 
-      - name: Install Databricks CLI
-        run: pip install databricks-connect==15.4.4 wheel
+#       - name: Install Databricks CLI
+#         run: pip install databricks-connect==15.4.4 wheel
 
-      - name: Show Databricks CLI version
-        run: databricks -v
+#       - name: Show Databricks CLI version
+#         run: databricks -v
 
-      - name: Configure DATABRICKS_HOST for Dev
-        run: |
-          echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEV }}" >> $GITHUB_ENV
+#       - name: Configure DATABRICKS_HOST for Dev
+#         run: |
+#           echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST_DEV }}" >> $GITHUB_ENV
 
-      - name: Validate bundle
-        run: databricks bundle validate --target dev
+#       - name: Validate bundle
+#         run: databricks bundle validate --target dev
 
-      - name: Deploy bundle
-        run: databricks bundle deploy --target dev
+#       - name: Deploy bundle
+#         run: databricks bundle deploy --target dev
 
-      - name: Run bronze job
-        run: databricks bundle run bronze-job --target dev
+#       - name: Run bronze job
+#         run: databricks bundle run bronze-job --target dev
 
-      - name: Run silver pipeline (DLT)
-        run: databricks bundle run silver-pipeline --target dev
+#       - name: Run silver pipeline (DLT)
+#         run: databricks bundle run silver-pipeline --target dev
 
-      - name: Run gold job
-        run: databricks bundle run gold-job --target dev
+#       - name: Run gold job
+#         run: databricks bundle run gold-job --target dev

@@ -12,7 +12,7 @@ variables:
 targets:
   dev:
     workspace:
-      host: ${{ env.DATABRICKS_HOST_DEV }}
+      host: "https://adb-2849778529432237.17.azuredatabricks.net"
     mode: development
 
   staging:
