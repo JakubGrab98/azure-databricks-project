@@ -33,7 +33,7 @@ resources:
         - task_key: bronze_ingest
           description: Load raw data into bronze tables
           spark_python_task:
-            python_file: apps/src/bronze/bronze_proc.py
+            python_file: src/bronze/bronze_proc.py
           job_cluster_key: bronze-cluster
       job_clusters:
         - job_cluster_key: bronze-cluster
@@ -48,7 +48,7 @@ resources:
         - task_key: silver_process
           description: Process data to silver layer
           spark_python_task:
-            python_file: apps/src/silver/silver_proc.py
+            python_file: src/silver/silver_proc.py
           job_cluster_key: silver-cluster
       job_clusters:
         - job_cluster_key: silver-cluster
@@ -63,7 +63,7 @@ resources:
         - task_key: gold_create_views
           description: Create final gold views and bridge tables
           spark_python_task:
-            python_file: apps/src/gold/gold_proc.py
+            python_file: src/gold/gold_proc.py
           job_cluster_key: gold-cluster
       job_clusters:
         - job_cluster_key: gold-cluster

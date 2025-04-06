@@ -5,3 +5,4 @@ src/silver/__pycache__/
 src/common/__pycache__/
 src/gold/__pycache__/
 .vscode/
+.databricks/

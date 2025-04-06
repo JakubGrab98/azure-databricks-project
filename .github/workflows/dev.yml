@@ -1,28 +1,28 @@
-name: Deploy to prod
+# name: Deploy to prod
 
-concurrency: 1
+# concurrency: 1
 
-on:
-  workflow_dispatch:
+# on:
+#   workflow_dispatch:
 
-  push:
-    branches:
-      - main
-    paths:
-      - "**/*.yml"
-      - "**/*.py"
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - "**/*.yml"
+#       - "**/*.py"
 
-jobs:
-  deploy:
-    name: "Deploy bundle"
-    runs-on: ubuntu-latest
+# jobs:
+#   deploy:
+#     name: "Deploy bundle"
+#     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
+#     steps:
+#       - uses: actions/checkout@v3
 
-      - uses: databricks/setup-cli@main
+#       - uses: databricks/setup-cli@main
 
-      - run: databricks bundle deploy --target dev
-        env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+#       - run: databricks bundle deploy --target dev
+#         env:
+#           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+#           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
