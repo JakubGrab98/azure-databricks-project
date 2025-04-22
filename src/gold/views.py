@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 
 
 def create_dim_players(spark: SparkSession):
+    """Creates a dimension view for players with surrogate key and basic info."""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_players AS
     SELECT 
@@ -17,6 +18,7 @@ def create_dim_players(spark: SparkSession):
     """)
 
 def create_dim_prices(spark: SparkSession):
+    """Creates a dimension view for price snapshots with start and end dates."""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_prices AS
     SELECT 
@@ -31,6 +33,7 @@ def create_dim_prices(spark: SparkSession):
     """)
 
 def create_dim_achievement(spark: SparkSession):
+    """Creates a dimension view for achievements."""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_achievement AS
     SELECT 
@@ -48,6 +51,14 @@ def create_bridge_tables(
     dim_key: str,
     dim_value: str
 ):
+    """Creates dimension and bridge views for array-type columns (many-to-many relationship).
+
+    Args:
+        spark (SparkSession): Active Spark session.
+        array_column (str): Name of the array column (e.g. publishers).
+        dim_key (str): Surrogate key to generate (e.g. publisher_sk).
+        dim_value (str): Name of exploded value (e.g. publisher_name).
+    """
     spark.sql(f"""
     CREATE OR REPLACE VIEW gold.dim_{array_column} AS
     WITH exploded AS (
@@ -82,6 +93,7 @@ def create_bridge_tables(
     """)
 
 def create_dim_games(spark: SparkSession):
+    """Creates a dimension view for games with surrogate key and basic info."""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_games AS
     SELECT 
@@ -95,6 +107,7 @@ def create_dim_games(spark: SparkSession):
     """)
 
 def create_games_flat(spark: SparkSession):
+    """Creates a flat games table with bridge surrogate keys."""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.games_flat AS
     SELECT 
@@ -124,6 +137,7 @@ def create_games_flat(spark: SparkSession):
 
 
 def create_fact_achievement(spark: SparkSession):
+    """Creates a fact view for achievement unlocks, linked to players and achievements."""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.fact_achievement AS
     WITH fact AS (

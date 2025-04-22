@@ -1,6 +1,9 @@
 bundle:
   name: azure-databricks-gaming-pipeline
 
+include:
+  - resources/*.yml
+
 variables:
   catalog:
     default: "main"
@@ -8,27 +11,47 @@ variables:
     default: "15.4.x-scala2.12"
   node_type_id:
     default: "Standard_D3_v2"
+  environment:
+    default: "dev"
+  raw_container:
+    default: "raw"
+  bronze_container:
+    default: "bronze-dev"
+  silver_container:
+    default:
+  storage_account:
+    default: "dbrgamingstorage"
+
 
 targets:
   dev:
     workspace:
-      host: "https://adb-2849778529432237.17.azuredatabricks.net"
+      host: "https://adb-418661255261433.13.azuredatabricks.net/?o=418661255261433"
     mode: development
 
-  staging:
-    workspace:
-      host: ${{ env.DATABRICKS_HOST_STAGING }}
-    mode: development
+  # staging:
+  #   workspace:
+  #     host: ${{ env.DATABRICKS_HOST_STAGING }}
+  #   mode: development
 
-  prod:
-    workspace:
-      host: ${{ env.DATABRICKS_HOST_PROD }}
-    mode: production
+  # prod:
+  #   workspace:
+  #     host: ${{ env.DATABRICKS_HOST_PROD }}
+  #   mode: production
 
 resources:
   jobs:
     bronze-job:
       name: bronze_ingestion_job
+      parameters:
+        - name: raw_path
+          default: abfss://raw@dbrgamingstorage.dfs.core.windows.net
+        - name: bronze_path
+          default: abfss://bronze-dev@dbrgamingstorage.dfs.core.windows.net
+        - name: silver_path
+          default: abfss://silver-dev@dbrgamingstorage.dfs.core.windows.net
+        - name: gold_path
+          default: abfss://gold-dev@dbrgamingstorage.dfs.core.windows.net
       tasks:
         - task_key: bronze_ingest
           description: Load raw data into bronze tables
@@ -40,7 +63,13 @@ resources:
           new_cluster:
             spark_version: ${var.spark_version}
             node_type_id: ${var.node_type_id}
-            num_workers: 2
+            spark_conf:
+              spark.storage.account.name: ${var.storage_account}
+              spark.raw.container: "raw"
+              spark.bronze.container: "bronze-dev"
+            autoscale:
+                min_workers: 1
+                max_workers: 2
 
     silver-job:
       name: silver_processing_job
@@ -55,7 +84,12 @@ resources:
           new_cluster:
             spark_version: ${var.spark_version}
             node_type_id: ${var.node_type_id}
-            num_workers: 2
+            spark_conf:
+              spark.storage.account.name: ${var.storage_account}
+              spark.silver.container: "silver-dev"
+            autoscale:
+                min_workers: 1
+                max_workers: 2
 
     gold-job:
       name: gold_view_creation_job
@@ -70,4 +104,8 @@ resources:
           new_cluster:
             spark_version: ${var.spark_version}
             node_type_id: ${var.node_type_id}
-            num_workers: 2
+            spark_conf:
+              spark.storage.account.name: ${var.storage_account}
+            autoscale:
+                min_workers: 1
+                max_workers: 2

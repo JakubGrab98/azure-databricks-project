@@ -1,10 +1,15 @@
+import sys
 from pyspark.sql import SparkSession
+
+
+sys.path.append("../")
 import views as v
 from common.spark_session import get_spark
 
 
 
 def main(spark: SparkSession) -> None:
+    spark.sql("CREATE SCHEMA IF NOT EXISTS gold")
     v.create_bridge_tables(spark, "publishers", "publishers_key", "publisher_name")
     v.create_bridge_tables(spark, "genres", "genres_key", "genre")
     v.create_bridge_tables(spark, "developers", "developers_key", "developer_name")
@@ -19,4 +24,3 @@ def main(spark: SparkSession) -> None:
 if __name__ == "__main__":
     spark = get_spark()
     main(spark)
-    

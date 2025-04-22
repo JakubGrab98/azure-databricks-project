@@ -1,5 +1,9 @@
 """Module responsibles for processing raw data to bronze layer."""
+import sys
 from pyspark.sql import SparkSession
+
+
+sys.path.append("../")
 from bronze_ingest import process_bronze_table
 from common.spark_session import get_spark
 

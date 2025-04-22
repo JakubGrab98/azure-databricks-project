@@ -1,11 +1,16 @@
 """Module responsibles for processing data from bronze to silver layer."""
+import sys
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.window import Window
 import pyspark.sql.functions as f
 from pyspark.sql.types import DateType, FloatType, IntegerType, LongType
 from typing import Callable
+
+
+sys.path.append("../")
 from utils import convert_to_array, remove_quotation
-from common.spark_session import get_spark
+from common.spark_session import get_spark, get_storage_path
+
 
 GAMES_COLUMNS_TO_CONVERT = ["developers", "publishers", "genres", "supported_languages"]
 
@@ -36,14 +41,15 @@ def load_silver(spark: SparkSession, df: DataFrame, table_name: str, mode: str =
         table_name (str): Destination table name.
         mode (str): Write mode. Defaults to "overwrite".
     """
+    silver_path = get_storage_path(spark, "silver.container")
     spark.sql("CREATE SCHEMA IF NOT EXISTS silver")
     spark.sql(f"DROP TABLE IF EXISTS silver.{table_name}" )
     spark.sql(f"""
         CREATE TABLE silver.{table_name}
         USING DELTA
-        LOCATION 's3a://gaming/silver/{table_name}'
+        LOCATION '{silver_path}/{table_name}'
     """)
-    df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(f"s3a://gaming/silver/{table_name}")
+    df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(f"{silver_path}/{table_name}")
 
 def transform_bronze_games(df: DataFrame) -> DataFrame:
     """Transforms games data from bronze to cleaned silver version."""

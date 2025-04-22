@@ -9,15 +9,15 @@ load_dotenv()
 
 KAGGLE_DATASET = "artyomkruglov/gaming-profiles-2025-steam-playstation-xbox"
 LOCAL_EXTRACT_PATH="./datasets"
-AZURE_STORAGE_ACCOUNT_NAME = "gamingprofilesdl"
+AZURE_STORAGE_ACCOUNT_NAME = "dbrgamingstorage"
 AZURE_CONTAINER_NAME = "raw"
 AZURE_STORAGE_KEY = os.getenv("AZURE_STORAGE_KEY")
 DATA_FOLDERS = ["playstation", "steam", "xbox"]
 
-api = KaggleApi()
-api.authenticate()
+# api = KaggleApi()
+# api.authenticate()
 
-api.dataset_download_files(KAGGLE_DATASET, path=LOCAL_EXTRACT_PATH, unzip=True)
+# api.dataset_download_files(KAGGLE_DATASET, path=LOCAL_EXTRACT_PATH, unzip=True)
 
 blob_service_client = BlobServiceClient(account_url=f"https://{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net", credential=AZURE_STORAGE_KEY)
 
