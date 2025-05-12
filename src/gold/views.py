@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 
 
 def create_dim_players(spark: SparkSession):
+    """Creates dimension table with players data"""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_players AS
     SELECT 
@@ -17,6 +18,7 @@ def create_dim_players(spark: SparkSession):
     """)
 
 def create_dim_prices(spark: SparkSession):
+    """Creates dimension table with game's price data"""
     spark.sql("""
     CREATE OR REPLACE VIEW gold.dim_prices AS
     SELECT 
